@@ -7,8 +7,8 @@
 Encoder enc(CLK, DT, SW); // Encoder class
 
 // Initialize pins of stepper driver
-int step = 4;
-int dir = 5;
+int step = 5;
+int dir = 4;
 int ms1 = 8;
 int ms2 = 7;
 int ms3 = 6;

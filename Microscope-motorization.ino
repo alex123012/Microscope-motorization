@@ -1,10 +1,10 @@
 #include <GyverEncoder.h>
-// #include <EEPROM.h>
+#include <timer-api.h>
 #include <avr/eeprom.h>
 
-#define CLK 7 // S1 pin of encoder
+#define CLK 9 // S1 pin of encoder
 #define DT 8 // S2 pin of encoder
-#define SW 9 // key pin of encoder
+#define SW 7 // key pin of encoder
 
 Encoder enc(CLK, DT, SW); // Encoder class
 
@@ -34,6 +34,7 @@ void setup()
 {
     enc.setTickMode(AUTO); // Autochecking encoder input
     enc.setType(TYPE2); // Setting encoder type
+    timer_init_ISR_1Hz(TIMER_DEFAULT); // Timer start
 
     // Setting pins of stepper driver in output mode
     pinMode(step, OUTPUT);
@@ -44,7 +45,6 @@ void setup()
     pinMode(svet1, OUTPUT);
     pinMode(svet2, OUTPUT);
     pinMode(svet3, OUTPUT);
-    // pinMode(enable, OUTPUT);
     Serial.begin(9600);
 }
 
@@ -54,7 +54,7 @@ void loop() {
     if (enc.isLeftH()) { // Left rotation + click
         mode++;
         if (mode>3){
-        mode = 3;
+            mode = 3;
         }
     }
 
@@ -73,7 +73,7 @@ void loop() {
         digitalWrite(svet1, HIGH);
         digitalWrite(svet2, LOW);
         digitalWrite(svet3, LOW);
-        speedak = speed*2;
+        speedak = speed*4;
     } else if (mode == 2) {
             v1 = LOW;
             v2 = HIGH;
@@ -89,7 +89,7 @@ void loop() {
                 digitalWrite(svet3, HIGH);
                 digitalWrite(svet1, LOW);
                 digitalWrite(svet2, LOW);
-                speedak = speed/8;
+                speedak = speed/4;
             }
     // Setting up step speed with variables
     digitalWrite(ms1, v1);
@@ -155,8 +155,11 @@ void loop() {
     // Record position and mode to memory
     eeprom_update_word(0, pos_counter);
     eeprom_update_word(6, mode);
-    // Serial.print(possible_val);
-    // Serial.print("\n");
-    // Serial.print(pos_counter);
-    // Serial.print("\n");
+}
+
+void timer_handle_interrupts(int timer) {
+    Serial.print(possible_val);
+    Serial.print("\n");
+    Serial.print(pos_counter);
+    Serial.print("\n");
 }

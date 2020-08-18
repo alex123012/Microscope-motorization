@@ -53,28 +53,26 @@ void loop() {
     // Changing speed mode number (possible 1, 2, 3)
     if (enc.isLeftH()) { // Left rotation + click
         mode++;
-        if (mode>3){
-            mode = 3;
-        }
+        if (mode>3){ mode = 3; }
     }
 
     if (enc.isRightH()){ // Right rotation + click
         mode--;
-        if (mode<1) {
-            mode = 1;
-        }
+        if (mode<1) { mode = 1; }
     }
     
     // Changing speed mode with mode number from 1 to 3
-    if (mode == 1){
-        v1 = LOW;
-        v2 = LOW;
-        v3 = LOW;
-        digitalWrite(svet1, HIGH);
-        digitalWrite(svet2, LOW);
-        digitalWrite(svet3, LOW);
-        speedak = speed*4;
-    } else if (mode == 2) {
+    switch (mode) {
+        case 1:
+            v1 = LOW;
+            v2 = LOW;
+            v3 = LOW;
+            digitalWrite(svet1, HIGH);
+            digitalWrite(svet2, LOW);
+            digitalWrite(svet3, LOW);
+            speedak = speed*4;
+            break;
+        case 2:
             v1 = LOW;
             v2 = HIGH;
             v3 = LOW;
@@ -82,15 +80,18 @@ void loop() {
             digitalWrite(svet1, LOW);
             digitalWrite(svet3, LOW);
             speedak = speed;
-        } else if (mode == 3){
-                v1 = HIGH;
-                v2 = HIGH;
-                v3 = HIGH;
-                digitalWrite(svet3, HIGH);
-                digitalWrite(svet1, LOW);
-                digitalWrite(svet2, LOW);
-                speedak = speed/4;
-            }
+            break;
+        case 3:
+            v1 = HIGH;
+            v2 = HIGH;
+            v3 = HIGH;
+            digitalWrite(svet3, HIGH);
+            digitalWrite(svet1, LOW);
+            digitalWrite(svet2, LOW);
+            speedak = speed/4;
+            break;
+    }
+    
     // Setting up step speed with variables
     digitalWrite(ms1, v1);
     digitalWrite(ms2, v2);

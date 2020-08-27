@@ -14,9 +14,9 @@ int step = 3;
 int ms3 = 4;
 int ms2 = 5;
 int ms1 = 6;
-int svet1 = 10;
-int svet2 = 11;
-int svet3 = 12;
+int svetR = 10;
+int svetG = 11;
+int svetB = 12;
 
 // Initialize variables for function
 int speed = 80; // Setting amount of iteration of cycle rotation
@@ -24,10 +24,9 @@ int mode = eeprom_read_word(6); // Setting speed modes (second speed mode in def
 int possible_val = eeprom_read_word(4); // Possible steps for rotation
 int pos_counter = eeprom_read_word(0); // Position of motor
 int speedak; // Steps size
-// Mode variables
-bool v1;
-bool v2;
-bool v3;
+
+// calibration on = true, calibration off = false
+int calibration_enable = false;
 
 // Starting setup of controller
 void setup()
@@ -42,60 +41,94 @@ void setup()
     pinMode(ms1, OUTPUT);
     pinMode(ms2, OUTPUT);
     pinMode(ms3, OUTPUT);
-    pinMode(svet1, OUTPUT);
-    pinMode(svet2, OUTPUT);
-    pinMode(svet3, OUTPUT);
+    pinMode(svetR, OUTPUT);
+    pinMode(svetG, OUTPUT);
+    pinMode(svetB, OUTPUT);
     Serial.begin(9600);
 }
 
 // working func
 void loop() {
-    // Changing speed mode number (possible 1, 2, 3)
-    if (enc.isLeftH()) { // Left rotation + click
-        mode++;
-        if (mode>3){ mode = 3; }
+    // Change normal mode to calibration mode and vice versa
+    if (enc.isHolded()) {
+        calibration_enable = !calibration_enable;
     }
 
-    if (enc.isRightH()){ // Right rotation + click
-        mode--;
-        if (mode<1) { mode = 1; }
-    }
-    
-    // Changing speed mode with mode number from 1 to 3
-    switch (mode) {
-        case 1:
-            v1 = LOW;
-            v2 = LOW;
-            v3 = LOW;
-            digitalWrite(svet1, HIGH);
-            digitalWrite(svet2, LOW);
-            digitalWrite(svet3, LOW);
-            speedak = speed*4;
+    // working in normal or calibration mode
+    switch (calibration_enable) {
+        case false:
+            // Changing speed mode number (possible 1, 2, 3)
+            if (enc.isLeftH()) { // Left rotation + click
+                mode++;
+                if (mode>3){ mode = 3; }
+            }
+
+            if (enc.isRightH()){ // Right rotation + click
+                mode--;
+                if (mode<1) { mode = 1; }
+            }
+            // Changing speed mode with mode number from 1 to 3
+            switch (mode) {
+                case 1:
+                    // Motor rotate speed
+                    digitalWrite(ms1, LOW);
+                    digitalWrite(ms2, LOW);
+                    digitalWrite(ms3, LOW);
+                    // Light color
+                    digitalWrite(svetG, HIGH);
+                    digitalWrite(svetR, LOW);
+                    digitalWrite(svetB, LOW);
+                    speedak = speed*4;
+                    break;
+                case 2:
+                    // Motor rotate speed
+                    digitalWrite(ms1, LOW);
+                    digitalWrite(ms2, HIGH);
+                    digitalWrite(ms3, LOW);
+                    // Light color
+                    digitalWrite(svetB, HIGH);
+                    digitalWrite(svetR, LOW);
+                    digitalWrite(svetG, LOW);
+                    speedak = speed;
+                    break;
+                case 3:
+                    // Motor rotate speed
+                    digitalWrite(ms1, HIGH);
+                    digitalWrite(ms2, HIGH);
+                    digitalWrite(ms3, HIGH);
+                    // Light color
+                    digitalWrite(svetR, HIGH);
+                    digitalWrite(svetB, LOW);
+                    digitalWrite(svetG, LOW);
+                    speedak = speed/4;
+                    break;
+            }
             break;
-        case 2:
-            v1 = LOW;
-            v2 = HIGH;
-            v3 = LOW;
-            digitalWrite(svet2, HIGH);
-            digitalWrite(svet1, LOW);
-            digitalWrite(svet3, LOW);
-            speedak = speed;
+        case true:
+            // Motor rotate speed
+            digitalWrite(ms1, LOW);
+            digitalWrite(ms2, LOW);
+            digitalWrite(ms3, LOW);
+            // Light color
+            digitalWrite(svetR, HIGH);
+            digitalWrite(svetG, HIGH);
+            digitalWrite(svetB, HIGH);
+
+            // Setting position counter to zero for calibration 
+            if  (enc.isRightH() || enc.isLeftH()) {
+                pos_counter = 0;
+            }
+
+            // Maximaze possible rotation value
+            if (enc.isDouble()) possible_val = 32000;
+
+            // Calibration of possible steps amount
+            if (enc.isSingle()) {
+                possible_val = abs(pos_counter/2);
+                eeprom_update_word(4, possible_val);
+            }
             break;
-        case 3:
-            v1 = HIGH;
-            v2 = HIGH;
-            v3 = HIGH;
-            digitalWrite(svet3, HIGH);
-            digitalWrite(svet1, LOW);
-            digitalWrite(svet2, LOW);
-            speedak = speed/4;
-            break;
-    }
-    
-    // Setting up step speed with variables
-    digitalWrite(ms1, v1);
-    digitalWrite(ms2, v2);
-    digitalWrite(ms3, v3);
+        }
 
     //returning rotor to normal position
     if (pos_counter >= possible_val){
@@ -143,14 +176,6 @@ void loop() {
             }
             pos_counter-=speedak;
         }
-    }
-    if (enc.isDouble()){
-        possible_val = 8001;
-    }
-    // Calibration of possible steps amount
-    if (enc.isSingle()) {
-        possible_val = abs(pos_counter);
-        eeprom_update_word(4, possible_val);
     }
 
     // Record position and mode to memory

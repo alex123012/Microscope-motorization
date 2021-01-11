@@ -1,22 +1,26 @@
-#include <GyverEncoder.h>
-#include <timer-api.h>
-#include <avr/eeprom.h>
+#include <GyverEncoder.h> // library for encoder commands
+// #include <timer-api.h> // library for timer
+#include <avr/eeprom.h> // library for flash memory
+#include <LiquidCrystal.h> // include the library code
 
-#define CLK 9 // S1 pin of encoder
-#define DT 8 // S2 pin of encoder
-#define SW 7 // key pin of encoder
+
+#define CLK 10 // S1 pin of encoder
+#define DT 11 // S2 pin of encoder
+#define SW 12 // key pin of encoder
 
 Encoder enc(CLK, DT, SW); // Encoder class
+
+// initialize the library by associating any needed LCD interface pin
+// with the arduino pin number it is connected to
+const int rs = 13, en = A0, d4 = A1, d5 = A2, d6 = A3, d7 = A4;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 // Initialize pins of stepper driver
 int dir = 2;
 int step = 3;
-int ms3 = 4;
-int ms2 = 5;
-int ms1 = 6;
-int svetR = 10;
-int svetG = 11;
-int svetB = 12;
+int ms3 = 6;
+int ms2 = 7;
+int ms1 = 8;
 
 // Initialize variables for function
 int speed = 80; // Setting amount of iteration of cycle rotation
@@ -33,7 +37,8 @@ void setup()
 {
     enc.setTickMode(AUTO); // Autochecking encoder input
     enc.setType(TYPE2); // Setting encoder type
-    timer_init_ISR_1Hz(TIMER_DEFAULT); // Timer start
+    // timer_init_ISR_1Hz(TIMER_DEFAULT); // Timer start
+    lcd.begin(16, 2); // set up the LCD's number of columns and rows:
 
     // Setting pins of stepper driver in output mode
     pinMode(step, OUTPUT);
@@ -41,10 +46,11 @@ void setup()
     pinMode(ms1, OUTPUT);
     pinMode(ms2, OUTPUT);
     pinMode(ms3, OUTPUT);
-    pinMode(svetR, OUTPUT);
-    pinMode(svetG, OUTPUT);
-    pinMode(svetB, OUTPUT);
-    Serial.begin(9600);
+    lcd.setCursor(6,0);
+    lcd.print("pos");
+    lcd.setCursor(0, 1);
+    lcd.print("v =   max");
+    // Serial.begin(9600);
 }
 
 // working func
@@ -52,6 +58,11 @@ void loop() {
     // Change normal mode to calibration mode and vice versa
     if (enc.isHolded()) {
         calibration_enable = !calibration_enable;
+        lcd.home();
+        lcd.print("     ");
+        lcd.setCursor(10, 1);
+        lcd.print("     ");
+
     }
 
     // working in normal or calibration mode
@@ -60,24 +71,20 @@ void loop() {
             // Changing speed mode number (possible 1, 2, 3)
             if (enc.isLeftH()) { // Left rotation + click
                 mode++;
-                if (mode>3){ mode = 3; }
+                if (mode>3) mode = 3;
             }
 
             if (enc.isRightH()){ // Right rotation + click
                 mode--;
-                if (mode<1) { mode = 1; }
+                if (mode<1) mode = 1;
             }
             // Changing speed mode with mode number from 1 to 3
             switch (mode) {
-                case 1:
+                case 3:
                     // Motor rotate speed
                     digitalWrite(ms1, LOW);
                     digitalWrite(ms2, LOW);
                     digitalWrite(ms3, LOW);
-                    // Light color
-                    digitalWrite(svetG, HIGH);
-                    digitalWrite(svetR, LOW);
-                    digitalWrite(svetB, LOW);
                     speedak = speed*4;
                     break;
                 case 2:
@@ -85,34 +92,27 @@ void loop() {
                     digitalWrite(ms1, LOW);
                     digitalWrite(ms2, HIGH);
                     digitalWrite(ms3, LOW);
-                    // Light color
-                    digitalWrite(svetB, HIGH);
-                    digitalWrite(svetR, LOW);
-                    digitalWrite(svetG, LOW);
                     speedak = speed;
                     break;
-                case 3:
+                case 1:
                     // Motor rotate speed
                     digitalWrite(ms1, HIGH);
                     digitalWrite(ms2, HIGH);
                     digitalWrite(ms3, HIGH);
-                    // Light color
-                    digitalWrite(svetR, HIGH);
-                    digitalWrite(svetB, LOW);
-                    digitalWrite(svetG, LOW);
                     speedak = speed/4;
                     break;
             }
+            lcd.setCursor(4,1);
+                lcd.print(mode);
             break;
         case true:
+            lcd.setCursor(0, 0);
+            lcd.print("Calib");
             // Motor rotate speed
             digitalWrite(ms1, LOW);
             digitalWrite(ms2, LOW);
             digitalWrite(ms3, LOW);
-            // Light color
-            digitalWrite(svetR, HIGH);
-            digitalWrite(svetG, HIGH);
-            digitalWrite(svetB, HIGH);
+            speedak = speed*4;
 
             // Setting position counter to zero for calibration 
             if  (enc.isRightH() || enc.isLeftH()) {
@@ -181,11 +181,27 @@ void loop() {
     // Record position and mode to memory
     eeprom_update_word(0, pos_counter);
     eeprom_update_word(6, mode);
+
+    // Print out info to lcd monitor
+    lcd.setCursor(11, 0);
+    lcd.print("     ");
+    lcd.setCursor(10, 0);
+    lcd.print(pos_counter);
+    lcd.setCursor(10, 1);
+    lcd.print(possible_val);
+    // lcd.clear();
 }
 
-void timer_handle_interrupts(int timer) {
-    Serial.print(possible_val);
-    Serial.print("\n");
-    Serial.print(pos_counter);
-    Serial.print("\n");
-}
+// void timer_handle_interrupts(int timer) {
+//     lcd.setCursor(6,0);
+//     lcd.print("pos");
+//     lcd.setCursor(0, 1);
+//     lcd.print("v =   max");
+//     lcd.setCursor(10, 0);
+//     lcd.print(pos_counter);
+//     lcd.setCursor(10, 1);
+//     lcd.print(possible_val);
+//     lcd.setCursor(4,1);
+//     lcd.print(mode);
+//     // lcd.clear();
+// }
